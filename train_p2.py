@@ -1,5 +1,7 @@
 import numpy as np
+import random
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
@@ -18,11 +20,46 @@ class Model(nn.Module):
     def forward(self, x): 
         return self.model(x)
 
+def save_plot_line_graphs(list1, list2, filename="loss.png", plot_type='loss'):
+
+    plt.figure(figsize=(10, 6))  # Set the figure size for better readability
+    
+    # Plotting both lists
+    plt.plot(list1, label='Train', marker='.')  
+    plt.plot(list2, label='Test', marker='.') 
+    
+    # Adding title and labels
+    if plot_type == 'loss': 
+        plt.title('Loss vs Epochs')
+    else: 
+        plt.title('Accuracy vs Epochs')
+    plt.xlabel('Epochs')
+    if plot_type == 'loss': 
+        plt.ylabel('Loss')
+    else: 
+        plt.ylabel('Accuracy')
+    
+    plt.legend()
+    plt.savefig(filename)
+    plt.close()
+
+def apply_roll(tensor,  dims, p=0.5, max_shift=None): 
+    rand_n = random.random()
+
+    if max_shift is None: 
+        max_shift = tensor.size(dims)
+
+    shifts = random.randint(-max_shift, max_shift)
+
+    if rand_n < p:
+        return torch.roll(tensor, shifts=shifts, dims=dims)
+    else: 
+        return tensor
 
 if __name__ == "__main__": 
 
     # configs
-    num_epochs = 100
+    num_epochs = 150
     lr = 0.01
     num_classes = 2
     hidden_dim = 10
@@ -58,6 +95,10 @@ if __name__ == "__main__":
         train_losses, train_acc = [], []
         for i, (x, y) in enumerate(train_loader): 
             x, y = x.to(device), y.to(device)
+            
+            # apply shift data aug (usually done in dataset but I'm lazy)
+            x = apply_roll(x, dims=1)
+
             out = model(x)
             loss = loss_fn(out, y)  
             train_losses.append(loss.item())
@@ -87,8 +128,9 @@ if __name__ == "__main__":
         epoch_test_acc.append(np.mean(np.array(test_acc)))
         epoch_test_loss.append(np.mean(np.array(test_losses)))
 
-    
-        
+
+    save_plot_line_graphs(epoch_train_acc, epoch_test_acc, filename='figs/p2_acc.png', plot_type='acc')
+    save_plot_line_graphs(epoch_train_loss, epoch_test_loss, filename='figs/p2_loss.png', plot_type='loss')
 
 
         
